@@ -1,7 +1,7 @@
-require_relative "gistto/version"
-require_relative "gistto/client"
+require "gistto/version"
+require "gistto/client"
 
-pp Gistto::Client.connect "erikwco"
+#pp Gistto::Client::run config
 
 
 #proxy = Faraday.new("https://api.github.com/", :ssl => { :ca_file => "/opt/local/share/curl/curl-ca-bundle.crt"})
