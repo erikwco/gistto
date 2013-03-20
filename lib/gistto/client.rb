@@ -29,7 +29,9 @@ module Gistto
 		extend self
 
 		def run(*args)
+			#
 			# options definitions and parsing
+			# 
 			options = {}
 			oparser = OptionParser.new do |option|
 				option.banner = "Usage: gistto [action] [options] [filename or stdin] [filename] .... \n" +
@@ -57,22 +59,30 @@ module Gistto
 
 			end
 
+			#
 			# parsing options
+			# 
 			oparser.parse!(args)
 
+			#
 			# validating args if empty exit 
+			# 
 			if args.empty?
 				puts oparser
 				exit
 			end
 
+			#
 			# validates params
+			# 
 			if !VALID_METHODS.include?(args[0])
 				puts oparser
 				exit
 			end
 
+			#
 			# calling methods 
+			# 
 			method_to_call = Gistto::Client.method(args[0])
 			if args.size > 1
 				method_to_call.call args.last(args.size - 1) 
