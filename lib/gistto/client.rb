@@ -126,10 +126,16 @@ module Gistto
 			# getting github user and password
     	str_user = get_user_from_global
     	if str_user.empty? 
-    		puts "Please configure GitHub Account before continue, remember add git config --global user.name"
-    		exit
+    		print "git config --global user.name is not configured, do you want to type user name instead ? (y/n)"
+    		do_type = $stdin.gets.chomp
+    		str_user = ask_for 'user name' if do_type.downcase == 'y'
+
+    		if str_user.empty? 
+	    		puts "Please configure GitHub Account before continue, remember add git config --global user.name"
+	    		exit
+    		end
     	end 
-    	str_pass = ask_for_password
+    	str_pass = ask_for 'password', true
 
     	# generate token
     	github_data = get_token_for str_user, str_pass
@@ -161,8 +167,11 @@ module Gistto
 		end
 
 		def add (*params)
-			p "add #{params.length} / #{params[0].length}"
-			puts params[0][0]
+			if params.empty?
+				puts "add options need files to add if you wanna type directly use option type" 
+				exit
+			end
+			#puts params[0][0]
 		end
 
 		def delete
@@ -202,13 +211,15 @@ module Gistto
 				e.message
 			end
 
-			def ask_for_password
-	    	`stty -echo`
-	    	print "Please type your GitHub Account password : "
-	    	pass = $stdin.gets.chomp 
-	    	`stty echo`
-	    	puts ""				
-	    	pass
+			def ask_for(what, hidden= false)
+	    	`stty -echo` if hidden
+	    	print "Please type your GitHub Account #{what} : "
+	    	data = $stdin.gets.chomp 
+	    	if hidden
+	    		`stty echo` 	
+	    		puts ""				
+	    	end
+	    	data
 			end
 
 			def get_user_from_global
