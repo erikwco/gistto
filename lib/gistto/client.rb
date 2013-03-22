@@ -12,10 +12,10 @@ module Gistto
 	# GITHUB AUTHORIZATIONS, REFERAL LINKS
 	# AND VALID METHODS
 	# 
-	GITHUB_API						= 'https://api.github.com/'
+	GITHUB_API						= 'https://api.github.com'
 	GITHUB_API_AUTH_LINK 	= '/authorizations'
 	GITHUB_API_GIST_LINK	= '/gists'
-	VALID_METHODS					= ['config','install','add','update','list','delete','sync']
+	VALID_METHODS					= ['config','add','update','list','delete','sync']
 
 	# 
 	# Clien todo list
@@ -91,113 +91,146 @@ module Gistto
 			end
 		end
 
-		# installing method
-		def install
-			p File.join(Dir.home,'.gistto')
-			p Dir.home
-			p "install"
-		end
 
 		#
-		# configuration method
-		# TODO: refactoring config method to separate responsabilities
-		#       
-		def config
-			puts "Please wait while we configure gistto in your Mac :)".cyan
-			#
-			# verify if configuration file exists : unless if only for degub purpose
-			#
-			abort Gistto::MSG_CONFIG_EXISTS unless File.exists?(File.join(Dir.home,'.gistto'))
-
-			#
-			# validates cert and copy to temp
-			#
-			unless File.exists?(File.join('/tmp','gistto.cert'))
-				FileUtils.cp File.join(File.expand_path('../../../extras', __FILE__),'gistto.crt'), '/tmp'
-				abort "Cert File can't be copied to temp dir" unless File.exists?(File.join('/tmp', 'gistto.crt'))
-			end
-			puts "Security Cert \t\t[%s]" % "Configured".green
-			#
-			# creating home file 
-			#
-			FileUtils.mkdir File.join(Dir.home, 'Gistto') unless File.exists?(File.join(Dir.home, 'Gistto'))
-			puts "Gistto directory \t[%s]" % "Configured".green
-
-			#
-			# getting github user and ask for password if github --global user.name is not configured
-			# the password will be asked for typing otherwise aborted
-			# 
-    	str_user = get_user_from_global
-    	if str_user.empty? 
-    		# set user name manually?
-    		print "git config --global user.name is not configured, do you want to type user name instead ? (y/n)"
-    		answer = $stdin.gets.chomp
-    		# ask for user
-    		str_user = ask_for 'user name' if answer.downcase == 'y'
-    		# user still empty?
-    		abort "Please configure GitHub Account before continue, remember add git config --global user.name" if str_user.empty?
-    	end 
-    	#
-    	# ask for password
-    	# 
-    	str_pass = ask_for 'password', true
-    	if str_pass.empty? 
-    		puts "Password can't be blank, please try again".yellow
-    		str_pass = ask_for 'password', true
-    		abort "Password can't be blank".red if str_pass.empty?
-    	end
-    	#
-    	# generate token
-    	# 
-    	github_data = get_token_for str_user, str_pass
-    	#
-    	# if message is present and error ocurred
-    	# 
-  		abort "\nAn error ocurred connecting with GitHub API to generate access token please try again! \nGitHub Error = #{github_data['message']}" if github_data.has_key? 'message'
-  		puts "Token \t\t\t[%s]" % "Configured".green
-  		#
-    	# validate if token key exists
-    	# 
-    	if github_data.has_key? 'token'
-				# creating configuration file 
-				File.open('/Users/erikchacon/.gistto', 'w') do |f|
-		      f.puts "Token:#{github_data['token']}"
-		      f.puts "Cert:/temp/gistto.cert"
-		      f.puts "Gistto-Home:%s" % File.join(Dir.home, 'Gistto')
-		      f.close
-				end
-				puts "Configuration done! gistto file was created with token : %s \nEnjoy Gistto" % "#{github_data['token']}".cyan
-			else
-				puts "\nToken could not be generated and stored in gistto configuration file, please try again".yellow
-			end
-		end 	# config
-
-		def init
-			p "init"
-		end 	# init
-
-		def add (*params)
-			if params.empty?
-				puts "add options need files to add if you wanna type directly use option type" 
-				exit
-			end
-			#puts params[0][0]
-		end 	# add
-
-		def delete
-			p "delete"
-		end 	# delete
-
-		def update
-			p "update"
-		end 	# update
-
-		def list
-			p "list"
-		end 	# list
-
-
+		#
+		# => PRIVATE METHODS
+		#
+		#
 		private
+
+			#
+			# configuration method
+			# TODO: refactoring config method to separate responsabilities
+			#       
+			def config
+				puts "Please wait while we configure gistto in your Mac :)".cyan
+				#
+				# verify if configuration file exists : unless if only for degub purpose
+				#
+				abort Gistto::MSG_CONFIG_EXISTS unless File.exists?(File.join(Dir.home,'.gistto'))
+
+				#
+				# validates cert and copy to temp
+				#
+				unless File.exists?(File.join('/tmp','gistto.cert'))
+					FileUtils.cp File.join(File.expand_path('../../../extras', __FILE__),'gistto.crt'), '/tmp'
+					abort "Cert File can't be copied to temp dir" unless File.exists?(File.join('/tmp', 'gistto.crt'))
+				end
+				puts "Security Cert \t\t[%s]" % "Configured".green
+				#
+				# creating home file 
+				#
+				FileUtils.mkdir File.join(Dir.home, 'Gistto') unless File.exists?(File.join(Dir.home, 'Gistto'))
+				puts "Gistto directory \t[%s]" % "Configured".green
+
+				#
+				# getting github user and ask for password if github --global user.name is not configured
+				# the password will be asked for typing otherwise aborted
+				# 
+	    	str_user = get_user_from_global
+	    	if str_user.empty? 
+	    		# set user name manually?
+	    		print "git config --global user.name is not configured, do you want to type user name instead ? (y/n)"
+	    		answer = $stdin.gets.chomp
+	    		# ask for user
+	    		str_user = ask_for 'user name' if answer.downcase == 'y'
+	    		# user still empty?
+	    		abort "Please configure GitHub Account before continue, remember add git config --global user.name" if str_user.empty?
+	    	end 
+	    	#
+	    	# ask for password
+	    	# 
+	    	str_pass = ask_for 'password', true
+	    	if str_pass.empty? 
+	    		puts "Password can't be blank, please try again".yellow
+	    		str_pass = ask_for 'password', true
+	    		abort "Password can't be blank".red if str_pass.empty?
+	    	end
+	    	#
+	    	# generate token
+	    	# 
+	    	github_data = get_token_for str_user, str_pass
+	    	#
+	    	# if message is present and error ocurred
+	    	# 
+	  		abort "\nAn error ocurred connecting with GitHub API to generate access token please try again! \nGitHub Error = #{github_data['message']}" if github_data.has_key? 'message'
+	  		puts "Token \t\t\t[%s]" % "Configured".green
+	  		#
+	    	# validate if token key exists
+	    	# 
+	    	if github_data.has_key? 'token'
+					# creating configuration file 
+					File.open('/Users/erikchacon/.gistto', 'w') do |f|
+			      f.puts "Token:#{github_data['token']}"
+			      f.puts "Cert:/temp/gistto.cert"
+			      f.puts "Gistto-Home:%s" % File.join(Dir.home, 'Gistto')
+			      f.close
+					end
+					puts "Configuration done! gistto file was created with token : %s \nEnjoy Gistto" % "#{github_data['token']}".cyan
+				else
+					puts "\nToken could not be generated and stored in gistto configuration file, please try again".yellow
+				end
+			end 	# config
+
+			#
+			# init method
+			#
+			def init
+				p "init"
+			end 	# init
+
+			#
+			# add method
+			# responsabilities:
+			# 	-	validate params if empty exit
+			#  	-	validate files in params
+			#   	-	file must exists
+			#    	- must have content or valid content
+			# considerations:
+			# 	at this moment if params.size > 1 it will create one gist by param
+			#  	maybe in refactoring it will create all the files in on gist
+			#
+			def add (*params)
+				# validate params
+				abort "add options need files to add if you wanna type directly use option type"  if params.empty?
+				# process files
+				params[0].each	do |file|
+					# exists
+					file_path = ((/\//.match(file).size) > 0) ? file : File.join(Dir.pwd, file)
+					file_exist = File.exist? file_path
+					if file_exist
+						file_name =  File.basename file_path
+						file_content =  File.read file_path						
+
+						gist_data =  post_new_gist "LINUX:: #{file_name} - sed tips", "#{file_name}", file_content.chomp
+						if gist_data.has_key? 'id'
+							puts "#{file_path} [%s] [#{gist_data['id']}]\n" % "created".green 
+						else
+							puts "#{file_path} [%s] [#{gist_data['message']}]\n" % "skip".red
+						end
+					else
+						puts "#{file_path} [%s] [doesn't exists]\n" % "skip".red
+					end
+				end
+
+				#creating new gist
+				#d_c = Time.now
+				#gist_data =  post_new_gist "LINUX::Sed tip 03 - print only paragraphs", "gistto-#{d_c.year}.#{d_c.month}.#{d_c.day}.#{d_c.hour}.#{d_c.min}.#{d_c.sec}.txt", "sed -e '/./{H;$!d;}' -e 'x;/Administration/!d' file"
+				#puts "Gist created => %s succesfull" % "#{gist_data['id']}".green
+			end 	# add
+
+			def delete
+				p "delete"
+			end 	# delete
+
+			def update
+				p "update"
+			end 	# update
+
+			def list
+				p "list"
+			end 	# list
 
 			#
 			# Make connection to Get Token
@@ -212,7 +245,24 @@ module Gistto
 					req.body = '{"note": "gistto", "scopes": ["repo","gist"]}'
 				end
  				JSON.parse response.body
-			end
+			end # get_token_for
+
+			#
+			# create a new public gist
+			#
+			# todo: dont DRY on Faraday connection
+			# todo: check cert
+			# todo: generate data for body
+			#
+			def post_new_gist(description, filename, content, ispublic=true)
+				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => "/tmp/gistto.crt"})
+				response = conn.post do |req|
+					req.url GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+					req.headers['Content-Type'] = 'application/json'
+					req.body = '{"description": "' + description + '", "public": true, "files": { "' + filename + '": {"content": " ' + content + ' " } } }'
+				end
+ 				JSON.parse response.body
+			end # post_new_gist
 
 			#
 			# Ask for data that must be introduced by user
@@ -227,11 +277,28 @@ module Gistto
 	    		puts ""				
 	    	end
 	    	data
-			end
+			end # ask_for
 
+			#
+			# get user from git global configuration
+			#
 			def get_user_from_global
 				%x(git config --global user.name).strip
-			end
+			end # get_user_from_global
 
-	end
-end
+			#
+			# generates data JSON 
+			# create gist
+			# delete gist
+			# update gist
+			# list gist
+			#
+			def generate_data
+				
+			end # generate_data
+
+	end # Module Client
+
+end # Module Gistto
+
+
