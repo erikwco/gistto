@@ -19,9 +19,7 @@ module Gistto
 
 	# 
 	# Clien todo list
-	# todo: Delete Gist
 	# todo: Sync Gists
-	# todo: check certicate on connection    
 	# todo: create help options
 	#          
 	module Client
@@ -264,7 +262,6 @@ module Gistto
 			#
 			# get a gist by id
 			# todo: open directly to the browser with -o option
-			# todo: copy to clipboard with -c option
 			#
 			def get id
 				gist_response =  get_gists id[0]
@@ -346,7 +343,6 @@ module Gistto
 			# create a new public gist
 			#
 			# todo: dont DRY on Faraday connection
-			# todo: check cert
 			# todo: read token from file
 			# todo: generate data for body
 			#
@@ -441,7 +437,10 @@ module Gistto
 				path
 			end # check_cert
 
-
+			#
+			# pbcopy
+			# todo: modify pbcopy to support any OS
+			#
 			def pbcopy str
 				IO.popen('pbcopy', 'w'){ |f| f << str.to_s }
 			end # pbcopy
