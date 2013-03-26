@@ -3,7 +3,7 @@ require 'faraday'
 require 'optparse'
 require 'fileutils'
 require 'tmpdir'
-require 'json'
+#require 'json'
 require 'pp'
 
 
@@ -19,11 +19,10 @@ module Gistto
 
 	# 
 	# Clien todo list
-	# todo: create new Gist
-	# todo: list Gists
 	# todo: Delete Gist
 	# todo: Sync Gists
 	# todo: check certicate on connection    
+	# todo: create help options
 	#          
 	module Client
 		extend self
@@ -102,13 +101,14 @@ module Gistto
 			#
 			# configuration method
 			# TODO: refactoring config method to separate responsabilities
+			# todo: make new configuration with -n parameter
 			#       
 			def config
 				puts "Please wait while we configure gistto in your Mac :)".cyan
 				#
 				# verify if configuration file exists : unless if only for degub purpose
 				#
-				abort Gistto::MSG_CONFIG_EXISTS unless File.exists?(File.join(Dir.home,'.gistto'))
+				abort Gistto::MSG_CONFIG_EXISTS if File.exists?(File.join(Dir.home,'.gistto'))
 
 				#
 				# validates cert and copy to temp
@@ -199,7 +199,7 @@ module Gistto
 						if file_content.empty?
 							puts "#{file_path} [%s] [empty]\n" % "skip".red
 						else
-							gist_data =  post_new_gist "LINUX:: #{file_name} - sed tips", "#{file_name}", file_content.chomp
+							gist_data =  post_new_gist generate_data "#{file_name}", "LINUX:: #{file_name} - sed tips", file_content.chomp
 							if gist_data.has_key? 'id'
 								puts "#{file_path} [%s] [#{gist_data['id']}]\n" % "created".green 
 							else
@@ -253,7 +253,7 @@ module Gistto
 				# validating content
 				abort "the content of the file mustn't be blank" if content.empty?
 				#creating file
-				gist_data =  post_new_gist description, filename, content.gsub("\\","\\\\\\\\").gsub("\n","\\n").gsub("\t","\\t").gsub("\"","\\#{34.chr}")
+				gist_data =  post_new_gist generate_data "#{filename}", "#{description}", content.chomp
 				if gist_data.has_key? 'id'
 					puts "\n#{filename} [%s] [#{gist_data['id']}]\n" % "created".green 
 				else
@@ -264,25 +264,26 @@ module Gistto
 
 			#
 			# get a gist by id
+			# todo: open directly to the browser with -o option
+			# todo: copy to clipboard with -c option
 			#
 			def get id
 				gist_response =  get_gists id[0]
+				str_code = ""
 				if gist_response.status == 200
-					puts gist_response.body
-					exit
-					gist_data = JSON.parse gist_response.body
+					gist_data = JSON.load(gist_response.body)
 					puts "%s\t\t#{gist_data['description']}" % "#{gist_data['id']}".cyan
-					#puts gist_data['files']
-
-					gist_data['files'].each do |file|
-						#pp JSON.unparse file[1]['content']
-						pp ::JSON.parse file[1]['content']
+					gist_data['files'].map do |name, content|
+						puts "\n%s" % name.cyan
+						puts content['content']
+						str_code << "#{content['content']} \n"
 					end
-
+					pbcopy str_code
+					puts "\nCode copied to clipboard!" 
 				else
 					puts "\nOcurred an error getting gist #{id} [%s]\n" % "fail".red
 				end
-			end
+			end # get
 
 			#
 			# 
@@ -290,11 +291,17 @@ module Gistto
 			def list
 				gist_response =  get_gists
 				if gist_response.status == 200
-					puts gist_response.body
-					gist_data = JSON.parse gist_response.body
-					gist_data.each do |data|
-						puts "%s\t\t#{data['description']}" % "#{data['id']}".cyan
+					gist_data = JSON.load gist_response.body
+					gist_data.map do |items|
+						puts "%s \t\t #{items['description']}" % "#{items['id']}".cyan
+						puts "Files :" + items['files'].map {|name, content| "\t#{name}".green }.join(",")
+						puts "\n"
 					end
+
+					# gist_data.each do |data|
+					# 	puts "%s\t\t#{data['description']}" % "#{data['id']}".cyan
+					# end
+
 				else
 					puts "\nOcurred an error getting list of gist[%s]\n" % "fail".red
 				end
@@ -306,13 +313,7 @@ module Gistto
 			end 	# delete
 
 			def update
-				# puts "{\"description\": 'description', \"public\": true, \"files\": { \"filename.txt\": {\"content\": \"content\" } } }".to_json
-				objectt =  JSON.parse '{"url":"https://api.github.com/gists/5240328","forks_url":"https://api.github.com/gists/5240328/forks","commits_url":"https://api.github.com/gists/5240328/commits","id":"5240328","git_pull_url":"https://gist.github.com/5240328.git","git_push_url":"https://gist.github.com/5240328.git","html_url":"https://gist.github.com/5240328","files":{"test-09.txt":{"filename":"test-09.txt","type":"text/plain","language":null,"raw_url":"https://gist.github.com/raw/5240328/0cebc55615ebe9804d2ddee849eef4ad9a141601/test-09.txt","size":43,"content":"class HE\n\tdef msg\n\t\thello world\n\tend\nend\n"}},"public":true,"created_at":"2013-03-25T20:17:56Z","updated_at":"2013-03-25T20:17:56Z","description":"test-09.txt","comments":0,"user":{"login":"erikwco","id":2466329,"avatar_url":"https://secure.gravatar.com/avatar/7913c3c8b91075d63b7f14ed0973b116?d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png","gravatar_id":"7913c3c8b91075d63b7f14ed0973b116","url":"https://api.github.com/users/erikwco","html_url":"https://github.com/erikwco","followers_url":"https://api.github.com/users/erikwco/followers","following_url":"https://api.github.com/users/erikwco/following","gists_url":"https://api.github.com/users/erikwco/gists{/gist_id}","starred_url":"https://api.github.com/users/erikwco/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/erikwco/subscriptions","organizations_url":"https://api.github.com/users/erikwco/orgs","repos_url":"https://api.github.com/users/erikwco/repos","events_url":"https://api.github.com/users/erikwco/events{/privacy}","received_events_url":"https://api.github.com/users/erikwco/received_events","type":"User"},"comments_url":"https://api.github.com/gists/5240328/comments","forks":[],"history":[{"user":{"login":"erikwco","id":2466329,"avatar_url":"https://secure.gravatar.com/avatar/7913c3c8b91075d63b7f14ed0973b116?d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png","gravatar_id":"7913c3c8b91075d63b7f14ed0973b116","url":"https://api.github.com/users/erikwco","html_url":"https://github.com/erikwco","followers_url":"https://api.github.com/users/erikwco/followers","following_url":"https://api.github.com/users/erikwco/following","gists_url":"https://api.github.com/users/erikwco/gists{/gist_id}","starred_url":"https://api.github.com/users/erikwco/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/erikwco/subscriptions","organizations_url":"https://api.github.com/users/erikwco/orgs","repos_url":"https://api.github.com/users/erikwco/repos","events_url":"https://api.github.com/users/erikwco/events{/privacy}","received_events_url":"https://api.github.com/users/erikwco/received_events","type":"User"},"version":"6784a637c21ab721bc419b5ac2fa257f199ecf13","committed_at":"2013-03-25T20:17:56Z","change_status":{"total":5,"additions":5,"deletions":0},"url":"https://api.github.com/gists/5240328/6784a637c21ab721bc419b5ac2fa257f199ecf13"}]}'
-				#pp objectt['files']
-				objectt['files'].each do |file|
-					#pp JSON.unparse file[1]['content']
-					pp JSON.parse file[1]['content']
-				end
+				p "update"
 			end 	# update
 
 
@@ -321,7 +322,7 @@ module Gistto
 			# todo: refactoring to use generic link
 			#
 			def get_token_for(username, password)
-				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => "/tmp/gistto.crt"})
+				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
 				conn.basic_auth(username, password)
 				response = conn.post do |req|
 					req.url GITHUB_API_AUTH_LINK
@@ -339,13 +340,14 @@ module Gistto
 			# todo: read token from file
 			# todo: generate data for body
 			#
-			def post_new_gist(description, filename, content, ispublic=true)
+			def post_new_gist content  #(description, filename, content, ispublic=true)
 				check_cert
-				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => "/tmp/gistto.crt"})
+				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
 				response = conn.post do |req|
 					req.url GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
 					req.headers['Content-Type'] = 'application/json'
-					req.body = '{"description": "' + description + '", "public": true, "files": { "' + filename + '": {"content": "' + content + '" } } }'
+					req.body =  JSON.generate(content)
+					#req.body = '{"description": "' + description + '", "public": true, "files": { "' + filename + '": {"content": "' + content + '" } } }'
 				end
  				JSON.parse response.body
 			end # post_new_gist
@@ -357,22 +359,7 @@ module Gistto
 			#
 			def get_gists id=nil
 				check_cert
-				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => "/tmp/gistto.crt"})
-				response = conn.get do |req|
-					req.url GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
-					req.headers['Content-Type'] = 'application/json'
-				end
- 				response
-			end
-
-
-			#
-			#
-			#
-			#
-			def get_raw url
-				check_cert
-				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => "/tmp/gistto.crt"})
+				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
 				response = conn.get do |req|
 					req.url GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
 					req.headers['Content-Type'] = 'application/json'
@@ -409,22 +396,36 @@ module Gistto
 			# update gist
 			# list gist
 			#
-			def generate_data
-				
+			def generate_data file_name, description, content, public=true
+		    # filename and content
+		    file_data = {}
+		    file_data[file_name] = {:content => content}
+		    # data
+		    gist_data = {"files" => file_data}
+		    gist_data.merge!({ 'description' => description })
+		    gist_data.merge!({ 'public' => public })
+		    gist_data				
 			end # generate_data
 
 
 			# 
 			# check if cert exist otherwise create
 			# todo: refactoring for DRY
+			# todo: read route from configuration file
 			# 
 			def check_cert
 				unless File.exists?(File.join('/tmp','gistto.cert'))
 					FileUtils.cp File.join(File.expand_path('../../../extras', __FILE__),'gistto.crt'), '/tmp'
 					abort "Cert File can't be copied to temp dir" unless File.exists?(File.join('/tmp', 'gistto.crt'))
 				end
+
+				File.join('/tmp','gistto.cert')
 			end
 
+
+			def pbcopy str
+				IO.popen('pbcopy', 'w'){ |f| f << str.to_s }
+			end
 
 	end # Module Client
 
