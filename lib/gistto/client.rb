@@ -104,7 +104,7 @@ module Gistto
 				#
 				# verify if configuration file exists : unless if only for degub purpose
 				#
-				abort Gistto::MSG_CONFIG_EXISTS if File.exists?(File.join(Dir.home,'.gistto'))
+				abort Gistto::MSG_CONFIG_EXISTS unless File.exists?(File.join(Dir.home,'.gistto'))
 
 				#
 				# validates cert and copy to temp
@@ -146,10 +146,12 @@ module Gistto
 	    	#
 	    	# generate token
 	    	# 
-	    	github_data = get_token_for str_user, str_pass
+	    	github_response = get_token_for str_user, str_pass
+	    	abort "\nAn error ocurred getting authorization token with GitHub API [status = %s]" % "#{github_response.status}".red unless github_response.status == 201
 	    	#
 	    	# if message is present and error ocurred
 	    	# 
+	    	github_data = JSON.load github_response.body
 	  		abort "\nAn error ocurred connecting with GitHub API to generate access token please try again! \nGitHub Error = #{github_data['message']}" if github_data.has_key? 'message'
 	  		puts "Token \t\t\t[%s]" % "Configured".green
 	  		#
@@ -335,56 +337,33 @@ module Gistto
 
 			#
 			# Make connection to Get Token
-			# todo: refactoring to use generic link
 			#
 			def get_token_for(username, password)
-				url = GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
-				response = connection url, :post, content, username, password
-
-				# conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				# conn.basic_auth(username, password)
-				# response = conn.post do |req|
-				# 	req.url GITHUB_API_AUTH_LINK
-				# 	req.headers['Content-Type'] = 'application/json'
-				# 	req.body = '{"note": "gistto", "scopes": ["repo","gist"]}'
-				# end
-				
- 				JSON.parse response.body
+				url = GITHUB_API_AUTH_LINK 
+				scopes = %w[repo gist]
+				content = generate_scope "gistto", scopes
+				connection url, :post, content, username, password
 			end # get_token_for
 
 			#
 			# create a new public gist
 			#
-			# todo: dont DRY on Faraday connection
 			# todo: read token from file
 			# todo: generate data for body
 			#
 			def post_new_gist content  
-				url = GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				url = GITHUB_API_GIST_LINK + "?access_token=67f8e1e46f6cd86b7326303b9961b211193635fc"
 				response = connection url, :post, content
-				# conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				# response = conn.post do |req|
-				# 	req.url GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
-				# 	req.headers['Content-Type'] = 'application/json'
-				# 	req.body =  JSON.generate(content)
-				# end
  				JSON.parse response.body
 			end # post_new_gist
-
 
 			#
 			#
 			#
 			#
 			def get_gists id=nil
-				url = GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				url = GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=67f8e1e46f6cd86b7326303b9961b211193635fc"
 				connection url, :get
-				# conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				# response = conn.get do |req|
-				# 	req.url GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
-				# 	req.headers['Content-Type'] = 'application/json'
-				# end
- 			# 	response
 			end # get_gists
 
 			#
@@ -392,14 +371,8 @@ module Gistto
 			#
 			#
 			def delete_gist id
-				url = "#{GITHUB_API_GIST_LINK}/#{id}?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				url = "#{GITHUB_API_GIST_LINK}/#{id}?access_token=67f8e1e46f6cd86b7326303b9961b211193635fc"
 				connection url, :delete
-				# conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				# response = conn.delete do |req|
-				# 	req.url "#{GITHUB_API_GIST_LINK}/#{id}?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
-				# 	req.headers['Content-Type'] = 'application/json'
-				# end
- 			# 	response
 			end # delete_gist
 
 			#
@@ -442,6 +415,12 @@ module Gistto
 		    gist_data				
 			end # generate_data
 
+			def generate_scope note, scope
+				scopes = {:note => note, :scopes => scope}
+				scopes
+			end
+
+
 			# 
 			# check if cert exist otherwise create
 			# todo: refactoring for DRY
@@ -478,5 +457,3 @@ module Gistto
 	end # Module Client
 
 end # Module Gistto
-
-
