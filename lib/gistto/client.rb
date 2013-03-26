@@ -3,7 +3,6 @@ require 'faraday'
 require 'optparse'
 require 'fileutils'
 require 'tmpdir'
-#require 'json'
 require 'pp'
 
 
@@ -208,12 +207,6 @@ module Gistto
 						puts "#{file_path} [%s] [doesn't exists]\n" % "skip".red
 					end
 				end
-
-				#creating new gist
-				#d_c = Time.now
-				#gist_data =  post_new_gist "LINUX::Sed tip 03 - print only paragraphs", "gistto-#{d_c.year}.#{d_c.month}.#{d_c.day}.#{d_c.hour}.#{d_c.min}.#{d_c.sec}.txt", "sed -e '/./{H;$!d;}' -e 'x;/Administration/!d' file"
-				#puts "Gist created => %s succesfull" % "#{gist_data['id']}".green
-				
 			end 	# add
 
 			#
@@ -317,25 +310,45 @@ module Gistto
 
 			#
 			#
+			# uses PATCH method
 			#
 			#
 			def update
 				p "update"
 			end 	# update
 
+			#
+			#
+			# connection
+			#
+			#
+			def connection url, mthd, content=nil, username=nil, password=nil
+				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
+				conn.basic_auth username, password unless username.nil? && password.nil?
+				response= conn.method(mthd).call do |req|
+					req.url url
+					req.headers['Content-Type'] = 'application/json'
+					req.body = JSON.generate(content) unless content.nil?
+				end
+				response
+			end # connection
 
 			#
 			# Make connection to Get Token
 			# todo: refactoring to use generic link
 			#
 			def get_token_for(username, password)
-				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				conn.basic_auth(username, password)
-				response = conn.post do |req|
-					req.url GITHUB_API_AUTH_LINK
-					req.headers['Content-Type'] = 'application/json'
-					req.body = '{"note": "gistto", "scopes": ["repo","gist"]}'
-				end
+				url = GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				response = connection url, :post, content, username, password
+
+				# conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
+				# conn.basic_auth(username, password)
+				# response = conn.post do |req|
+				# 	req.url GITHUB_API_AUTH_LINK
+				# 	req.headers['Content-Type'] = 'application/json'
+				# 	req.body = '{"note": "gistto", "scopes": ["repo","gist"]}'
+				# end
+				
  				JSON.parse response.body
 			end # get_token_for
 
@@ -347,12 +360,14 @@ module Gistto
 			# todo: generate data for body
 			#
 			def post_new_gist content  
-				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				response = conn.post do |req|
-					req.url GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
-					req.headers['Content-Type'] = 'application/json'
-					req.body =  JSON.generate(content)
-				end
+				url = GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				response = connection url, :post, content
+				# conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
+				# response = conn.post do |req|
+				# 	req.url GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				# 	req.headers['Content-Type'] = 'application/json'
+				# 	req.body =  JSON.generate(content)
+				# end
  				JSON.parse response.body
 			end # post_new_gist
 
@@ -362,12 +377,14 @@ module Gistto
 			#
 			#
 			def get_gists id=nil
-				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				response = conn.get do |req|
-					req.url GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
-					req.headers['Content-Type'] = 'application/json'
-				end
- 				response
+				url = GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				connection url, :get
+				# conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
+				# response = conn.get do |req|
+				# 	req.url GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				# 	req.headers['Content-Type'] = 'application/json'
+				# end
+ 			# 	response
 			end # get_gists
 
 			#
@@ -375,12 +392,14 @@ module Gistto
 			#
 			#
 			def delete_gist id
-				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				response = conn.delete do |req|
-					req.url "#{GITHUB_API_GIST_LINK}/#{id}?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
-					req.headers['Content-Type'] = 'application/json'
-				end
- 				response
+				url = "#{GITHUB_API_GIST_LINK}/#{id}?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				connection url, :delete
+				# conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
+				# response = conn.delete do |req|
+				# 	req.url "#{GITHUB_API_GIST_LINK}/#{id}?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+				# 	req.headers['Content-Type'] = 'application/json'
+				# end
+ 			# 	response
 			end # delete_gist
 
 			#
@@ -444,6 +463,17 @@ module Gistto
 			def pbcopy str
 				IO.popen('pbcopy', 'w'){ |f| f << str.to_s }
 			end # pbcopy
+
+			#
+			#
+			# create a random file name en base a date of creation
+			#
+			#
+			def gistto_file_name
+				d_c = Time.now
+				"gistto-#{d_c.year}.#{d_c.month}.#{d_c.day}.#{d_c.hour}.#{d_c.min}.#{d_c.sec}.txt"
+			end # gistto file name
+
 
 	end # Module Client
 
