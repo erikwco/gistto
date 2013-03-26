@@ -3,6 +3,7 @@ require 'faraday'
 require 'optparse'
 require 'fileutils'
 require 'tmpdir'
+require 'json'
 require 'pp'
 
 
