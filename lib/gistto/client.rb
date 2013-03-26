@@ -15,7 +15,7 @@ module Gistto
 	GITHUB_API						= 'https://api.github.com'
 	GITHUB_API_AUTH_LINK 	= '/authorizations'
 	GITHUB_API_GIST_LINK	= '/gists'
-	VALID_METHODS					= ['config','add','update','list','delete','sync','type','get']
+	VALID_METHODS					= ['config','add','list','delete','type','get']
 
 	# 
 	# Clien todo list
@@ -38,7 +38,6 @@ module Gistto
 											"\t config \n" +
 											"\t add \n" +
 											"\t get \n" +
-											"\t update \n" +
 											"\t list \n" +
 											"\t delete \n \n \n" 
 
@@ -52,7 +51,7 @@ module Gistto
 				end
 
 				option.on('-h','--help','Display help screen') do
-					pusts oparser
+					puts oparser
 					exit
 				end
 
