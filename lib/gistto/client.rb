@@ -276,6 +276,7 @@ module Gistto
 					gist_data['files'].map do |name, content|
 						puts "\n%s" % name.cyan
 						puts content['content']
+						str_code << "\n\n****** #{name} *******\n\n"
 						str_code << "#{content['content']} \n"
 					end
 					pbcopy str_code
@@ -297,21 +298,31 @@ module Gistto
 						puts "Files :" + items['files'].map {|name, content| "\t#{name}".green }.join(",")
 						puts "\n"
 					end
-
-					# gist_data.each do |data|
-					# 	puts "%s\t\t#{data['description']}" % "#{data['id']}".cyan
-					# end
-
 				else
 					puts "\nOcurred an error getting list of gist[%s]\n" % "fail".red
 				end
 			end 	# list
 
-
-			def delete
-				p "delete"
+			#
+			#
+			#
+			#
+			def delete id
+				id.each do |gist|
+					gist_response = delete_gist gist
+					if gist_response.status == 204
+						puts "Gist %s deleted ! " % "#{gist}".cyan
+					else
+						gist_data = JSON.parse gist_response.body
+						puts "Gist %s couldn't be deleted [#{gist_data['message']}]" % "#{gist}".red
+					end
+				end
 			end 	# delete
 
+			#
+			#
+			#
+			#
 			def update
 				p "update"
 			end 	# update
@@ -340,14 +351,12 @@ module Gistto
 			# todo: read token from file
 			# todo: generate data for body
 			#
-			def post_new_gist content  #(description, filename, content, ispublic=true)
-				check_cert
+			def post_new_gist content  
 				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
 				response = conn.post do |req|
 					req.url GITHUB_API_GIST_LINK + "?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
 					req.headers['Content-Type'] = 'application/json'
 					req.body =  JSON.generate(content)
-					#req.body = '{"description": "' + description + '", "public": true, "files": { "' + filename + '": {"content": "' + content + '" } } }'
 				end
  				JSON.parse response.body
 			end # post_new_gist
@@ -358,14 +367,26 @@ module Gistto
 			#
 			#
 			def get_gists id=nil
-				check_cert
 				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
 				response = conn.get do |req|
 					req.url GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
 					req.headers['Content-Type'] = 'application/json'
 				end
  				response
-			end
+			end # get_gists
+
+			#
+			#
+			#
+			#
+			def delete_gist id
+				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
+				response = conn.delete do |req|
+					req.url "#{GITHUB_API_GIST_LINK}/#{id}?access_token=811033a7319a682b2ab0df6f97cd42b49ed37dd4"
+					req.headers['Content-Type'] = 'application/json'
+				end
+ 				response
+			end # delete_gist
 
 			#
 			# Ask for data that must be introduced by user
@@ -407,25 +428,24 @@ module Gistto
 		    gist_data				
 			end # generate_data
 
-
 			# 
 			# check if cert exist otherwise create
 			# todo: refactoring for DRY
 			# todo: read route from configuration file
 			# 
 			def check_cert
-				unless File.exists?(File.join('/tmp','gistto.cert'))
+				path = File.join('/tmp','gistto.crt')
+				unless File.exists? path
 					FileUtils.cp File.join(File.expand_path('../../../extras', __FILE__),'gistto.crt'), '/tmp'
-					abort "Cert File can't be copied to temp dir" unless File.exists?(File.join('/tmp', 'gistto.crt'))
+					abort "Cert File can't be copied to temp dir" unless File.exists? path
 				end
-
-				File.join('/tmp','gistto.cert')
-			end
+				path
+			end # check_cert
 
 
 			def pbcopy str
 				IO.popen('pbcopy', 'w'){ |f| f << str.to_s }
-			end
+			end # pbcopy
 
 	end # Module Client
 
