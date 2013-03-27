@@ -300,6 +300,11 @@ module Gistto
 				open_in_browser = (@options.empty?) ? false : @options.has_key?(:open)
 				save_local = (@options.empty?) ? false : @options.has_key?(:local)
 				show_in_screen =(@options.empty?) ? false : @options.has_key?(:show)
+
+				if !copy_to_clipboard && !open_in_browser && !save_local && !show_in_screen
+					puts "Gets without options[-c|-s|-l|-o] don't produce any output we will activate copy to clipboard".yellow
+				end
+
 				gistto_home = read_from_config_file "Gistto-Home"
 				#
 				str_code = ""
