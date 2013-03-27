@@ -16,7 +16,6 @@ module Gistto
 	GITHUB_API_AUTH_LINK 	= '/authorizations'
 	GITHUB_API_GIST_LINK	= '/gists'
 	VALID_METHODS					= ['config','add','list','delete','type','get']
-
 	# 
 	# Clien todo list
 	# todo: Sync Gists
@@ -24,6 +23,11 @@ module Gistto
 	#          
 	module Client
 		extend self
+
+		#
+		# instance module variables
+		#
+		@temporal_token = nil
 
 		def run(*args)
 			#
@@ -33,14 +37,18 @@ module Gistto
 			oparser = OptionParser.new do |option|
 				option.banner = "Usage: gistto [action] [options] [filename or stdin] [filename] .... \n" +
 											"action : \n" +
-											"\t config \n" +
-											"\t add \n" +
+											"\t config [-n|--new]\n" +
+											"\t add [-p|--private]\n" +
 											"\t get \n" +
 											"\t list \n" +
 											"\t delete \n \n \n" 
 
-				option.on('-n', '--new config', 'Makes a new user configuration') do |n|
+				option.on('-n', '--new', 'Makes a new user configuration') do |n|
 					options[:new_config] = n
+				end
+
+				option.on('-p', '--private', 'Save Gist as private') do |n|
+					options[:private] = n
 				end
 
 				option.on('-v', '--version', 'Display Gistto current version') do
@@ -62,7 +70,7 @@ module Gistto
 
 			#
 			# validating args if empty exit 
-			# 
+			#
 			if args.empty?
 				puts oparser
 				exit
@@ -71,6 +79,7 @@ module Gistto
 			#
 			# validates params
 			# 
+			#args << options unless options.empty?
 			if !VALID_METHODS.include?(args[0])
 				puts oparser
 				exit
@@ -99,28 +108,32 @@ module Gistto
 			# configuration method
 			# TODO: refactoring config method to separate responsabilities
 			# todo: make new configuration with -n parameter
+			# todo: handle error
 			#       
-			def config
-				puts "Please wait while we configure gistto in your Mac :)".cyan
+			def config 
+				puts "Please wait while we configure gistto in your Mac :)\n".cyan
 				#
 				# verify if configuration file exists : unless if only for degub purpose
 				#
-				abort Gistto::MSG_CONFIG_EXISTS unless File.exists?(File.join(Dir.home,'.gistto'))
-
+				#overwrite = has_param params, :new_config
+				abort Gistto::MSG_CONFIG_EXISTS if File.exists?(File.join(Dir.home,'.gistto'))
+				config_file_path = File.join(Dir.home, '.gistto')
+				puts "configuration file \t[%s]" % "#{config_file_path}".cyan
 				#
 				# validates cert and copy to temp
 				#
-				unless File.exists?(File.join('/tmp','gistto.cert'))
+				path_cert = File.join('/tmp','gistto.crt')
+				unless File.exists? path_cert
 					FileUtils.cp File.join(File.expand_path('../../../extras', __FILE__),'gistto.crt'), '/tmp'
-					abort "Cert File can't be copied to temp dir" unless File.exists?(File.join('/tmp', 'gistto.crt'))
+					abort "Cert File can't be copied to temp dir" unless File.exists? path_cert
 				end
-				puts "Security Cert \t\t[%s]" % "Configured".green
+				puts "Security Cert \t\t[%s] [%s]" % ["Configured".green, "#{path_cert}".cyan]
 				#
 				# creating home file 
 				#
-				FileUtils.mkdir File.join(Dir.home, 'Gistto') unless File.exists?(File.join(Dir.home, 'Gistto'))
-				puts "Gistto directory \t[%s]" % "Configured".green
-
+				home_path = File.join(Dir.home, 'Gistto')
+				FileUtils.mkdir home_path unless File.exists? home_path
+				puts "Gistto directory \t[%s] [%s]" % ["Configured".green, "#{home_path}".cyan]
 				#
 				# getting github user and ask for password if github --global user.name is not configured
 				# the password will be asked for typing otherwise aborted
@@ -148,25 +161,26 @@ module Gistto
 	    	# generate token
 	    	# 
 	    	github_response = get_token_for str_user, str_pass
-	    	abort "\nAn error ocurred getting authorization token with GitHub API [status = %s]" % "#{github_response.status}".red unless github_response.status == 201
+	    	#abort "\nAn error ocurred getting authorization token with GitHub API [status = %s]" % "#{github_response.status}".red unless github_response.status == 201
 	    	#
 	    	# if message is present and error ocurred
 	    	# 
 	    	github_data = JSON.load github_response.body
-	  		abort "\nAn error ocurred connecting with GitHub API to generate access token please try again! \nGitHub Error = #{github_data['message']}" if github_data.has_key? 'message'
+	  		abort "\nAn error ocurred generating GitHub Token, please try again!\nGitHub Error = %s" % "#{github_data['message']}".red if github_data.has_key? 'message'
 	  		puts "Token \t\t\t[%s]" % "Configured".green
 	  		#
 	    	# validate if token key exists
 	    	# 
 	    	if github_data.has_key? 'token'
 					# creating configuration file 
-					File.open('/Users/erikchacon/.gistto', 'w') do |f|
-			      f.puts "Token:#{github_data['token']}"
-			      f.puts "Cert:/temp/gistto.cert"
-			      f.puts "Gistto-Home:%s" % File.join(Dir.home, 'Gistto')
+					File.open(config_file_path , 'w') do |f|
+			      f.puts "Token:%s" % "#{github_data['token']}"
+			      f.puts "Cert:%s" % "#{path_cert}"
+			      f.puts "Gistto-Home:%s" % home_path
 			      f.close
 					end
-					puts "Configuration done! gistto file was created with token : %s \nEnjoy Gistto" % "#{github_data['token']}".cyan
+					puts "Configuration done!".yellow
+					puts "GitHub Token : \t\t[%s] \n\n%s" % ["#{github_data['token']}".green, "enjoy Gistto !!!".green]
 				else
 					puts "\nToken could not be generated and stored in gistto configuration file, please try again".yellow
 				end
@@ -182,6 +196,8 @@ module Gistto
 			# considerations:
 			# 	at this moment if params.size > 1 it will create one gist by param
 			#  	maybe in refactoring it will create all the files in on gist
+			#   
+			# todo: make public or private gist
 			#
 			def add *params
 				# validate params
@@ -198,7 +214,8 @@ module Gistto
 						if file_content.empty?
 							puts "#{file_path} [%s] [empty]\n" % "skip".red
 						else
-							gist_data =  post_new_gist generate_data "#{file_name}", "LINUX:: #{file_name} - sed tips", file_content.chomp
+							#is_private = has_param params, :private
+							gist_data =  post_new_gist generate_data "#{file_name}", "#{file_name}", file_content.chomp
 							if gist_data.has_key? 'id'
 								puts "#{file_path} [%s] [#{gist_data['id']}]\n" % "created".green 
 							else
@@ -210,6 +227,8 @@ module Gistto
 						puts "#{file_path} [%s] [doesn't exists]\n" % "skip".red
 					end
 				end
+			rescue Exception => e
+				puts e
 			end 	# add
 
 			#
@@ -246,13 +265,15 @@ module Gistto
 				# validating content
 				abort "the content of the file mustn't be blank" if content.empty?
 				#creating file
+				#is_private = has_param params, :private
 				gist_data =  post_new_gist generate_data "#{filename}", "#{description}", content.chomp
 				if gist_data.has_key? 'id'
 					puts "\n#{filename} [%s] [#{gist_data['id']}]\n" % "created".green 
 				else
-					puts "\n#{filename} [%s] [#{gist_data['message']}]\n" % "fail".red
+					puts "\n#{filename} [%s] [#{gist_data['message']}]\n" % "fail".red\
 				end
-				
+			rescue Exception => e
+				puts e
 			end # type
 
 			#
@@ -276,10 +297,12 @@ module Gistto
 				else
 					puts "\nOcurred an error getting gist #{id} [%s]\n" % "fail".red
 				end
+			rescue Exception => e
+				puts e
 			end # get
 
 			#
-			# 
+			# todo: handle large list of gists for multipage 
 			#
 			def list
 				gist_response =  get_gists
@@ -293,6 +316,8 @@ module Gistto
 				else
 					puts "\nOcurred an error getting list of gist[%s]\n" % "fail".red
 				end
+			rescue Exception => e
+				puts e
 			end 	# list
 
 			#
@@ -309,6 +334,8 @@ module Gistto
 						puts "Gist %s couldn't be deleted [#{gist_data['message']}]" % "#{gist}".red
 					end
 				end
+			rescue Exception => e
+				puts e
 			end 	# delete
 
 			#
@@ -322,19 +349,21 @@ module Gistto
 
 			#
 			#
-			# connection
+			# https_open_for
 			#
 			#
-			def connection url, mthd, content=nil, username=nil, password=nil
+			def https_open_for url, mthd, content=nil, username=nil, password=nil
 				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
 				conn.basic_auth username, password unless username.nil? && password.nil?
 				response= conn.method(mthd).call do |req|
-					req.url url
+					req.url url + ((username.nil? && password.nil?) ? "?access_token=%s" % read_token : "" )
 					req.headers['Content-Type'] = 'application/json'
 					req.body = JSON.generate(content) unless content.nil?
 				end
 				response
-			end # connection
+			rescue Exception => e
+				raise "An error ocurred trying to open connection with GitHub [%s]" % "#{e}".red
+			end # https_open_for
 
 			#
 			# Make connection to Get Token
@@ -342,8 +371,8 @@ module Gistto
 			def get_token_for(username, password)
 				url = GITHUB_API_AUTH_LINK 
 				scopes = %w[repo gist]
-				content = generate_scope "gistto", scopes
-				connection url, :post, content, username, password
+				content = generate_scope "Gistto", scopes
+				https_open_for url, :post, content, username, password
 			end # get_token_for
 
 			#
@@ -353,8 +382,8 @@ module Gistto
 			# todo: generate data for body
 			#
 			def post_new_gist content  
-				url = GITHUB_API_GIST_LINK + "?access_token=67f8e1e46f6cd86b7326303b9961b211193635fc"
-				response = connection url, :post, content
+				url = GITHUB_API_GIST_LINK 
+				response = https_open_for url, :post, content
  				JSON.parse response.body
 			end # post_new_gist
 
@@ -363,8 +392,8 @@ module Gistto
 			#
 			#
 			def get_gists id=nil
-				url = GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}") +"?access_token=67f8e1e46f6cd86b7326303b9961b211193635fc"
-				connection url, :get
+				url = GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}")
+				https_open_for url, :get
 			end # get_gists
 
 			#
@@ -372,8 +401,8 @@ module Gistto
 			#
 			#
 			def delete_gist id
-				url = "#{GITHUB_API_GIST_LINK}/#{id}?access_token=67f8e1e46f6cd86b7326303b9961b211193635fc"
-				connection url, :delete
+				url = "#{GITHUB_API_GIST_LINK}/#{id}"
+				https_open_for url, :delete
 			end # delete_gist
 
 			#
@@ -416,6 +445,10 @@ module Gistto
 		    gist_data				
 			end # generate_data
 
+			#
+			#
+			#
+			#
 			def generate_scope note, scope
 				scopes = {:note => note, :scopes => scope}
 				scopes
@@ -454,7 +487,41 @@ module Gistto
 				"gistto-#{d_c.year}.#{d_c.month}.#{d_c.day}.#{d_c.hour}.#{d_c.min}.#{d_c.sec}.txt"
 			end # gistto file name
 
+			#
+			#
+			#
+			#
+			def has_param params, key
+				#return false unless#params.first.first.kind_of? Array
+				params.first.first.has_key?(key) && params.first.first[key] unless params.empty?
+			end # has_param
+
+			#
+			#
+			#
+			#
+			def read_token
+				return @temporal_token unless @temporal_token.nil?
+				# configuration file
+				configuration_file = File.join(Dir.home, '.gistto')
+				File.open(configuration_file, 'r') do |handler|
+					while line = handler.gets
+						if /^Token:/ =~ line 
+							@temporal_token = line.split(":")[1].chomp!
+							break
+						end
+					end
+				end
+				@temporal_token
+			end
+
 
 	end # Module Client
 
 end # Module Gistto
+
+
+
+
+
+

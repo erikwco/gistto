@@ -4,10 +4,14 @@ module Gistto
 
 # Message used when a configuration file already exists
 MSG_CONFIG_EXISTS= <<-EOS
-Yeah! Configuration file already exists in your home dir !!
-You can now move on and begin to Use Gistto or if you want to reconfigure Gistto
-please type: gistto config -n to make a new configuration otherwise
-please type gistto help to see what can you do!
+Gistto is already configured on your MAC :) !!
+
+but
+
+if you want to overwrite the configuration run:
+gistto config -n 
+
+enjoy Gistto!! <3
 EOS
 
 
