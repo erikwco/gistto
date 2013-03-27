@@ -36,13 +36,13 @@ module Gistto
 			# 
 			oparser = OptionParser.new do |option|
 				option.banner = "Usage  : gistto [action] [options] [arguments] ... \n" +
-												"action : \n" +
-												"\t config [-n|--new]\n" +
-												"\t add    [-p|--private] file-path1 file-path2 ...  file-pathN\n" +
-												"\t get    [-o|--open] [-c|--clipboard] [-l|--local] gist-ID\n" +
-												"\t delete gist-ID\n" +
-												"\t list \n\n" +
-												"\twarn: [-l|--local] will overwrite local files without mercy :) \n\n".red
+												"* action : \n" +
+												"* config [-n|--new]\n" +
+												"* add    [-p|--private] file-path1 file-path2 ...  file-pathN\n" +
+												"* get    [-o|--open] [-c|--clipboard] [-l|--local] [-s|--show] gist-ID\n" +
+												"* delete gist-ID\n" +
+												"* list \n\n" +
+												"warn: [-l|--local] will overwrite local files without mercy :) \n\n".red
 				# new configuration
 				option.on('-n', '--new', 			'Makes a new user configuration') { |n| @options[:new_config] = n }
 				# private gist
@@ -53,6 +53,8 @@ module Gistto
 				option.on('-c', '--clipboard','Copy Gist to clipboard') { |n| @options[:clipboard] = n }
 				# copy gist file(s) to gistto folder
 				option.on('-l', '--local',		'Copy Gist file(s) to gissto folder') { |n| @options[:local] = n }
+				# show input into screen
+				option.on('-s', '--show',			'Show Gist file(s) in the screen') { |n| @options[:show] = n }
 				# version
 				option.on('-v', '--version', 'Display Gistto current version') do
 					puts Gistto::VERSION
@@ -297,41 +299,51 @@ module Gistto
 				copy_to_clipboard =  (@options.empty?) ? false : @options.has_key?(:clipboard)
 				open_in_browser = (@options.empty?) ? false : @options.has_key?(:open)
 				save_local = (@options.empty?) ? false : @options.has_key?(:local)
+				show_in_screen =(@options.empty?) ? false : @options.has_key?(:show)
 				gistto_home = read_from_config_file "Gistto-Home"
 				#
-				gist_response =  get_gists ({id: id[0][0]}) 
 				str_code = ""
-				if gist_response.status == 200
-					# 
-					gist_data = JSON.load(gist_response.body)
-					puts "%s\t\t#{gist_data['description']}" % "#{gist_data['id']}".cyan
-					# recorring files
-					gist_data['files'].map do |name, content|
-						puts "\n%s" % name.cyan
-						puts content['content']
-						str_code << "\n\n****** #{name} *******\n\n"
-						str_code << "#{content['content']} \n"
-						# open in browser
-						navigate_to "#{content['raw_url']}" if open_in_browser
-						# create files
-						if save_local
-							# creating folders
-							local_path = File.join gistto_home, gist_data['id']
-							local_file = File.join local_path, name
-							FileUtils.mkdir_p local_path
-							# creating files
-							File.open(local_file, 'w') {|f| f.write(content['content']) } 
-							#
-							puts "%s successfull created in %s" % ["#{name}".green, "#{local_path}".green]
+				id[0].each do |item|
+
+					gist_response =  get_gists ({id: item}) 
+					if gist_response.status == 200
+						# 
+						gist_data = JSON.load(gist_response.body)
+						#screen
+						puts "\n\n%s\t\t#{gist_data['description']}" % "#{gist_data['id']}".cyan if show_in_screen
+						# recorring files
+						str_code << "\n\nGIST ID :#{item}\n"
+						gist_data['files'].map do |name, content|
+							# screen
+							puts "\n%s\n" % name.yellow if show_in_screen
+							puts "#{content['content']}\n\n" if show_in_screen
+							# clipboard
+							str_code << "\n\n****** #{name} *******\n\n"
+							str_code << "#{content['content']} \n"
+							# open in browser
+							navigate_to "#{content['raw_url']}" if open_in_browser
+							# create files
+							if save_local
+								# creating folders
+								local_path = File.join gistto_home, gist_data['id']
+								local_file = File.join local_path, name
+								FileUtils.mkdir_p local_path
+								# creating files
+								File.open(local_file, 'w') {|f| f.write(content['content']) } 
+								#
+								puts "%s successfull created in %s" % ["#{name}".green, "#{local_path}".green]
+							end
+						end # map
+						# clipboard
+						if copy_to_clipboard && item.equal?(id[0].last)
+							pbcopy str_code
+							puts "\nCode copied to clipboard!" 
 						end
-					end # map
-					if copy_to_clipboard
-						pbcopy str_code
-						puts "\nCode copied to clipboard!" 
+					else
+						puts "\nOcurred an error getting gist #{id} [%s]\n" % "fail".red
 					end
-				else
-					puts "\nOcurred an error getting gist #{id} [%s]\n" % "fail".red
-				end
+
+				end # each id
 			rescue Exception => e
 				puts e
 			end # get
@@ -389,8 +401,18 @@ module Gistto
 			#
 			#
 			def update
-				p "update"
+				p "Not implemented yet"
 			end 	# update
+
+
+			def sync
+				puts "Not implemented yet"
+			end
+
+			def pull
+				pust "Not implemented yet"
+				
+			end
 
 			#
 			#
