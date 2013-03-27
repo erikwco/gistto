@@ -15,7 +15,7 @@ module Gistto
 	GITHUB_API						= 'https://api.github.com'
 	GITHUB_API_AUTH_LINK 	= '/authorizations'
 	GITHUB_API_GIST_LINK	= '/gists'
-	VALID_METHODS					= ['config','add','list','delete','type','get']
+	VALID_METHODS					= ['config','add','list','delete','type','get','sync','pull']
 	# 
 	# Clien todo list
 	# todo: Sync Gists
@@ -28,34 +28,37 @@ module Gistto
 		# instance module variables
 		#
 		@temporal_token = nil
+		@options = {}
 
 		def run(*args)
 			#
 			# options definitions and parsing
 			# 
-			options = {}
 			oparser = OptionParser.new do |option|
-				option.banner = "Usage: gistto [action] [options] [filename or stdin] [filename] .... \n" +
-											"action : \n" +
-											"\t config [-n|--new]\n" +
-											"\t add [-p|--private]\n" +
-											"\t get \n" +
-											"\t list \n" +
-											"\t delete \n \n \n" 
-
-				option.on('-n', '--new', 'Makes a new user configuration') do |n|
-					options[:new_config] = n
-				end
-
-				option.on('-p', '--private', 'Save Gist as private') do |n|
-					options[:private] = n
-				end
-
+				option.banner = "Usage  : gistto [action] [options] [arguments] ... \n" +
+												"action : \n" +
+												"\t config [-n|--new]\n" +
+												"\t add    [-p|--private] file-path1 file-path2 ...  file-pathN\n" +
+												"\t get    [-o|--open] [-c|--clipboard] [-l|--local] gist-ID\n" +
+												"\t delete gist-ID\n" +
+												"\t list \n\n" +
+												"\twarn: [-l|--local] will overwrite local files without mercy :) \n\n".red
+				# new configuration
+				option.on('-n', '--new', 			'Makes a new user configuration') { |n| @options[:new_config] = n }
+				# private gist
+				option.on('-p', '--private', 	'Save Gist as private') { |n| @options[:private] = n }
+				# open gist in raw view
+				option.on('-o', '--open', 		'Open Gist in browser in raw format') { |n| @options[:open] = n }
+				# copy gist to the clipboard
+				option.on('-c', '--clipboard','Copy Gist to clipboard') { |n| @options[:clipboard] = n }
+				# copy gist file(s) to gistto folder
+				option.on('-l', '--local',		'Copy Gist file(s) to gissto folder') { |n| @options[:local] = n }
+				# version
 				option.on('-v', '--version', 'Display Gistto current version') do
 					puts Gistto::VERSION
 					exit
 				end
-
+				# help
 				option.on('-h','--help','Display help screen') do
 					puts oparser
 					exit
@@ -65,8 +68,14 @@ module Gistto
 
 			#
 			# parsing options
-			# 
-			oparser.parse!(args)
+			#
+			begin
+				oparser.parse!(args) 	
+			rescue
+				puts oparser
+				exit
+			end 
+			
 
 			#
 			# validating args if empty exit 
@@ -79,7 +88,6 @@ module Gistto
 			#
 			# validates params
 			# 
-			#args << options unless options.empty?
 			if !VALID_METHODS.include?(args[0])
 				puts oparser
 				exit
@@ -115,8 +123,8 @@ module Gistto
 				#
 				# verify if configuration file exists : unless if only for degub purpose
 				#
-				#overwrite = has_param params, :new_config
-				abort Gistto::MSG_CONFIG_EXISTS if File.exists?(File.join(Dir.home,'.gistto'))
+				overwrite = (@options.empty?) ? false : @options.has_key?(:new_config)
+				abort Gistto::MSG_CONFIG_EXISTS if File.exists?(File.join(Dir.home,'.gistto')) && !overwrite
 				config_file_path = File.join(Dir.home, '.gistto')
 				puts "configuration file \t[%s]" % "#{config_file_path}".cyan
 				#
@@ -131,7 +139,7 @@ module Gistto
 				#
 				# creating home file 
 				#
-				home_path = File.join(Dir.home, 'Gistto')
+				home_path = File.join(Dir.home, 'gistto')
 				FileUtils.mkdir home_path unless File.exists? home_path
 				puts "Gistto directory \t[%s] [%s]" % ["Configured".green, "#{home_path}".cyan]
 				#
@@ -214,8 +222,8 @@ module Gistto
 						if file_content.empty?
 							puts "#{file_path} [%s] [empty]\n" % "skip".red
 						else
-							#is_private = has_param params, :private
-							gist_data =  post_new_gist generate_data "#{file_name}", "#{file_name}", file_content.chomp
+							is_public = (@options.empty?) ? true : !@options.has_key?(:private)
+							gist_data =  post_new_gist generate_data "#{file_name}", "#{file_name}", file_content.chomp, is_public
 							if gist_data.has_key? 'id'
 								puts "#{file_path} [%s] [#{gist_data['id']}]\n" % "created".green 
 							else
@@ -265,8 +273,8 @@ module Gistto
 				# validating content
 				abort "the content of the file mustn't be blank" if content.empty?
 				#creating file
-				#is_private = has_param params, :private
-				gist_data =  post_new_gist generate_data "#{filename}", "#{description}", content.chomp
+				is_public = (@options.empty?) ? true : !@options.has_key?(:private)
+				gist_data =  post_new_gist generate_data "#{filename}", "#{description}", content.chomp, is_public
 				if gist_data.has_key? 'id'
 					puts "\n#{filename} [%s] [#{gist_data['id']}]\n" % "created".green 
 				else
@@ -280,20 +288,47 @@ module Gistto
 			# get a gist by id
 			# todo: open directly to the browser with -o option
 			#
-			def get id
-				gist_response =  get_gists id[0]
+			def get *id
+				if id.empty?
+					puts "gist-ID is required parameter for get method"
+					exit 
+				end
+				#options
+				copy_to_clipboard =  (@options.empty?) ? false : @options.has_key?(:clipboard)
+				open_in_browser = (@options.empty?) ? false : @options.has_key?(:open)
+				save_local = (@options.empty?) ? false : @options.has_key?(:local)
+				gistto_home = read_from_config_file "Gistto-Home"
+				#
+				gist_response =  get_gists ({id: id[0][0]}) 
 				str_code = ""
 				if gist_response.status == 200
+					# 
 					gist_data = JSON.load(gist_response.body)
 					puts "%s\t\t#{gist_data['description']}" % "#{gist_data['id']}".cyan
+					# recorring files
 					gist_data['files'].map do |name, content|
 						puts "\n%s" % name.cyan
 						puts content['content']
 						str_code << "\n\n****** #{name} *******\n\n"
 						str_code << "#{content['content']} \n"
+						# open in browser
+						navigate_to "#{content['raw_url']}" if open_in_browser
+						# create files
+						if save_local
+							# creating folders
+							local_path = File.join gistto_home, gist_data['id']
+							local_file = File.join local_path, name
+							FileUtils.mkdir_p local_path
+							# creating files
+							File.open(local_file, 'w') {|f| f.write(content['content']) } 
+							#
+							puts "%s successfull created in %s" % ["#{name}".green, "#{local_path}".green]
+						end
+					end # map
+					if copy_to_clipboard
+						pbcopy str_code
+						puts "\nCode copied to clipboard!" 
 					end
-					pbcopy str_code
-					puts "\nCode copied to clipboard!" 
 				else
 					puts "\nOcurred an error getting gist #{id} [%s]\n" % "fail".red
 				end
@@ -304,14 +339,24 @@ module Gistto
 			#
 			# todo: handle large list of gists for multipage 
 			#
-			def list
-				gist_response =  get_gists
+			def list *page
+				page = [[1]] if page.empty?
+				gist_response =  get_gists({page: page[0][0]})
 				if gist_response.status == 200
 					gist_data = JSON.load gist_response.body
+
+					# getting pages
+					total_moves = get_total_moves gist_response[:link]
+					# printing
 					gist_data.map do |items|
-						puts "%s \t\t #{items['description']}" % "#{items['id']}".cyan
+						puts "%s%s#{items['description']}" % ["#{items['id']}".cyan, "#{items['public'] ? "\t\t\tPublic\t\t" : "\tPrivate\t\t"}".magenta]
 						puts "Files :" + items['files'].map {|name, content| "\t#{name}".green }.join(",")
 						puts "\n"
+					end
+					# moves?
+					unless total_moves.empty?
+						puts "There are more gist pending to show, to load them run:"
+						total_moves.each { |e| puts "gistto list #{e}".green }
 					end
 				else
 					puts "\nOcurred an error getting list of gist[%s]\n" % "fail".red
@@ -352,17 +397,18 @@ module Gistto
 			# https_open_for
 			#
 			#
-			def https_open_for url, mthd, content=nil, username=nil, password=nil
+			def https_open_for  ops={}
+				ops={:url=> nil, :mthd=> nil,:content => nil, :username => nil, :password => nil, :page=> nil}.merge(ops)
 				conn = Faraday.new(GITHUB_API	, :ssl => { :ca_file => check_cert})
-				conn.basic_auth username, password unless username.nil? && password.nil?
-				response= conn.method(mthd).call do |req|
-					req.url url + ((username.nil? && password.nil?) ? "?access_token=%s" % read_token : "" )
+				conn.basic_auth ops[:username], ops[:password] unless ops[:username].nil? && ops[:password].nil?
+				response= conn.method(ops[:mthd]).call do |req|
+					req.url ops[:url] + ((ops[:username].nil? && ops[:password].nil?) ? "?access_token=%s" % read_token : "" ) + ((ops[:page].nil?) ? "" : "&page=#{ops[:page]}")
 					req.headers['Content-Type'] = 'application/json'
-					req.body = JSON.generate(content) unless content.nil?
+					req.body = JSON.generate(ops[:content]) unless ops[:content].nil?
 				end
 				response
-			rescue Exception => e
-				raise "An error ocurred trying to open connection with GitHub [%s]" % "#{e}".red
+			#rescue Exception => e
+				#raise "An error ocurred trying to open connection with GitHub [%s]" % "#{e}".red
 			end # https_open_for
 
 			#
@@ -372,7 +418,7 @@ module Gistto
 				url = GITHUB_API_AUTH_LINK 
 				scopes = %w[repo gist]
 				content = generate_scope "Gistto", scopes
-				https_open_for url, :post, content, username, password
+				https_open_for ({url: url, mthd: "post", content: content, username: username, password: password})
 			end # get_token_for
 
 			#
@@ -383,7 +429,7 @@ module Gistto
 			#
 			def post_new_gist content  
 				url = GITHUB_API_GIST_LINK 
-				response = https_open_for url, :post, content
+				response = https_open_for ({url: url, mthd:"post", content: content})
  				JSON.parse response.body
 			end # post_new_gist
 
@@ -391,9 +437,10 @@ module Gistto
 			#
 			#
 			#
-			def get_gists id=nil
-				url = GITHUB_API_GIST_LINK + ( id.nil? ? "" : "/#{id}")
-				https_open_for url, :get
+			def get_gists ops={}
+				ops={:id=>nil, :page=>1}.merge(ops)
+				url = GITHUB_API_GIST_LINK + ( ops[:id].nil? ? "" : "/#{ops[:id]}")
+				https_open_for ({url: url, mthd:"get" , page: ops[:page]})
 			end # get_gists
 
 			#
@@ -402,7 +449,7 @@ module Gistto
 			#
 			def delete_gist id
 				url = "#{GITHUB_API_GIST_LINK}/#{id}"
-				https_open_for url, :delete
+				https_open_for ({:url=> url, mthd:"delete"})
 			end # delete_gist
 
 			#
@@ -502,19 +549,54 @@ module Gistto
 			#
 			def read_token
 				return @temporal_token unless @temporal_token.nil?
+				@temporal_token = read_from_config_file "Token"
+				@temporal_token
+			end
+
+			#
+			#
+			#
+			#
+			#
+			def read_from_config_file param
+				config_value = nil
 				# configuration file
 				configuration_file = File.join(Dir.home, '.gistto')
 				File.open(configuration_file, 'r') do |handler|
 					while line = handler.gets
-						if /^Token:/ =~ line 
-							@temporal_token = line.split(":")[1].chomp!
+						if /^#{param}:/ =~ line 
+							config_value = line.split(":")[1].chomp!
 							break
 						end
 					end
 				end
-				@temporal_token
+				config_value				
 			end
 
+			#
+			#
+			#
+			#
+			def navigate_to url
+				`open #{url}`
+			end # navigate_to
+
+
+			#
+			#
+			#
+			#
+			def get_total_moves links
+				# validating for return 
+				return [] if links.nil?
+				# get all available moves in links
+				total_moves = links.split(",").map do |link|
+					link = link.gsub(/[<>]/,'').strip.split(";").first
+					i_page = link.split("&").to_a.select { |v| v.match("page") }.map { |v| v.split("=")[1] }.first
+					link = i_page
+				end.uniq
+				total_moves
+			end # get_total_pages
 
 	end # Module Client
 
