@@ -10,7 +10,7 @@ Gem::Specification.new do |gem|
   gem.email         = ["erikchacon@me.com"]
   gem.description   = %q{Gist Client with multiples and suitables functionalities}
   gem.summary       = %q{Gist Client for GitHub}
-  gem.homepage      = ""
+  gem.homepage      = "https://github.com/erikwco/gistto"
 
   gem.files         = `git ls-files`.split($/)
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
