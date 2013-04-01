@@ -86,7 +86,8 @@ you created on with get command and -l option
 	5 - Fix some typos 
 	6 - Complete all rspec definitions 
 	7 - Complete all rdoc documentation
-	8 - Some new features to add in the future :)
+	8 - Test and implement for Linux/Unix/Windows
+	9 - Some new features to add in the future :)
 
 
 ## Contributing
