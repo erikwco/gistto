@@ -62,6 +62,7 @@ But if you want to get a gist that you already have get command if what you need
 	$ gistto get [-o|--open] [-c|--clipboard] [-l|--local] [-s|--show] gist-ID
 
 Get have different options 
+
 	* -o : if you want to open in the browser in the raw format
 	* -c : if you want to copy the content of gist directly to the clipboard (don't worry if the gist contains
 more than one file every file will be identified to ease handle)
