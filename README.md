@@ -16,11 +16,12 @@ The first step is configure gistto to create the enviroment using:
 	$ gistto config
 
 this will create some configurations:
- 1 - gistto home folder under your user home directory as: ~/gistto
- 2 - gistto configuration file under your user home directory as : ~/.gistto
- 3 - copy gistto.crt to /tmp folder for oAuth v3 Authentication under https
- 4 - verify for git global configuration for username or ask him if git is not present
- 5 - generate authentication token for oAuth v3 
+
+	1 - gistto home folder under your user home directory as: ~/gistto
+	2 - gistto configuration file under your user home directory as : ~/.gistto
+	3 - copy gistto.crt to /tmp folder for oAuth v3 Authentication under https
+	4 - verify for git global configuration for username or ask him if git is not present
+	5 - generate authentication token for oAuth v3 
 
 Once your configuration is done and if you want to reconfigure on change user to save gists 
 you can run the command config again but with option (-n) that allows you to overwrite configuration 
