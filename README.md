@@ -17,7 +17,7 @@ The first step is configure gistto to create the enviroment using:
 
 this will create some configurations:
 
-	1 - gistto home folder under your user home directory as: **~/gistto**
+	1 - gistto home folder under your user home directory as: <b>~/gistto</b>
 	2 - gistto configuration file under your user home directory as : ~/.gistto
 	3 - copy gistto.crt to /tmp folder for oAuth v3 Authentication under https
 	4 - verify for git global configuration for username or ask him if git is not present
