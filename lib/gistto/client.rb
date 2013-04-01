@@ -18,8 +18,7 @@ module Gistto
 	VALID_METHODS					= ['config','add','list','delete','type','get','sync','pull']
 	# 
 	# Clien todo list
-	# todo: Sync Gists
-	# todo: create help options
+	# todo: sync, pull and inline update methods 
 	#          
 	module Client
 		extend self
@@ -77,7 +76,6 @@ module Gistto
 				puts oparser
 				exit
 			end 
-			
 
 			#
 			# validating args if empty exit 
@@ -106,7 +104,6 @@ module Gistto
 			end
 		end
 
-
 		#
 		#
 		# => PRIVATE METHODS
@@ -117,8 +114,6 @@ module Gistto
 			#
 			# configuration method
 			# TODO: refactoring config method to separate responsabilities
-			# todo: make new configuration with -n parameter
-			# todo: handle error
 			#       
 			def config 
 				puts "Please wait while we configure gistto in your Mac :)\n".cyan
@@ -194,20 +189,12 @@ module Gistto
 				else
 					puts "\nToken could not be generated and stored in gistto configuration file, please try again".yellow
 				end
+			rescue 
+				exit
 			end 	# config
 
 			#
 			# add method
-			# responsabilities:
-			# 	-	validate params if empty exit
-			#  	-	validate files in params
-			#   	-	file must exists
-			#    	- must have content or valid content
-			# considerations:
-			# 	at this moment if params.size > 1 it will create one gist by param
-			#  	maybe in refactoring it will create all the files in on gist
-			#   
-			# todo: make public or private gist
 			#
 			def add *params
 				# validate params
@@ -288,7 +275,6 @@ module Gistto
 
 			#
 			# get a gist by id
-			# todo: open directly to the browser with -o option
 			#
 			def get *id
 				if id.empty?
@@ -355,7 +341,7 @@ module Gistto
 			end # get
 
 			#
-			# todo: handle large list of gists for multipage 
+			# list
 			#
 			def list *page
 				page = [[1]] if page.empty?
@@ -452,9 +438,6 @@ module Gistto
 			#
 			# create a new public gist
 			#
-			# todo: read token from file
-			# todo: generate data for body
-			#
 			def post_new_gist content  
 				url = GITHUB_API_GIST_LINK 
 				response = https_open_for ({url: url, mthd:"post", content: content})
@@ -532,8 +515,6 @@ module Gistto
 
 			# 
 			# check if cert exist otherwise create
-			# todo: refactoring for DRY
-			# todo: read route from configuration file
 			# 
 			def check_cert
 				path = File.join('/tmp','gistto.crt')
