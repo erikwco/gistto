@@ -33,7 +33,20 @@ Now, to List all the gists that you already have generated you must run:
 
 	$ gistto list
 
-This list all the gist availables, showing 30 gist at time, to move an get the others (if you have more than 30),
+This list all the gist availables, showing 30 gist at time. 
+
+	1			   		Public		Gist :: First Gist
+	Files :	file1-1.txt
+
+	2			   		Private		Gist :: Second Gist
+	Files :	file2-1.txt
+
+	3			   		Public		Gist :: Third Gist
+	Files :	file3-1.txt, file3-2.txt
+
+
+
+To move an get the others (if you have more than 30),
 gistto show you at the end of the list the available commands, for example if you have 45 gists 
 the available commands are :
 
