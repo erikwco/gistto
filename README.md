@@ -114,3 +114,7 @@ you created on with get command and -l option
 
 ## License
 gistto is licensed under the MIT standard license. see LICENSE for further information.
+
+
+## Apologize
+English is not my maternal language i'm still in the process of learning, please sorry and any correction or suggestion is welcome
