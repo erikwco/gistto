@@ -291,7 +291,7 @@ module Gistto
 			#
 			#
 			def update
-				p "Not implemented yet"
+				puts "Not implemented yet"
 			end 	# update
 
 
@@ -300,7 +300,7 @@ module Gistto
 			end
 
 			def pull
-				pust "Not implemented yet"
+				puts "Not implemented yet"
 			end
 
 	end

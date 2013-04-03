@@ -54,7 +54,7 @@ module Gistto
 				end
 				# help
 				option.on('-h','--help','Display help screen') do
-					puts oparser
+					puts @oparser
 					exit
 				end
 
@@ -82,7 +82,8 @@ module Gistto
 			# validates params
 			# 
 			if !VALID_METHODS.include?(args[0])
-				puts oparser
+				#puts oparser
+				puts "Not valid method: please run gistto -h"
 				exit
 			end
 

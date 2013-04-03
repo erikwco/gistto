@@ -1,8 +1,8 @@
-Feature: greeter says hello
+Feature: gistto config new user
 
-	In Order to start learning Rspec and Cucumber
-	As a reader of the Rspec Book
-	I want a greeter to say Hello
+	In Order to config gistto in Mac
+	user must to run configuration command
+	gistto config to be ready to work
 
 	Scenario: greeter says hello
 	Given a greeter
