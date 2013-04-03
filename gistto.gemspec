@@ -6,6 +6,7 @@ require 'gistto'
 Gem::Specification.new do |gem|
   gem.name          = "gistto"
   gem.version       = Gistto::VERSION
+  gem.license       = "MIT"
   gem.authors       = ["erikwco"]
   gem.email         = ["erikchacon@me.com"]
   gem.description   = %q{Gist Client with multiples and suitables functionalities}
