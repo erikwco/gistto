@@ -97,3 +97,7 @@ you created on with get command and -l option
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create new Pull Request
+
+
+## License
+gistto is licensed under the MIT standard license. see LICENSE for further information.
