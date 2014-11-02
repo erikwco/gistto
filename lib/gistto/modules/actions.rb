@@ -14,6 +14,7 @@ module Gistto
 			# TODO: refactoring config method to separate responsabilities
 			#       
 			def config 
+				
 				puts "Please wait while we configure gistto in your Mac :)\n".cyan
 				#
 				# verify if configuration file exists : unless if only for degub purpose
@@ -22,21 +23,29 @@ module Gistto
 				abort Gistto::MSG_CONFIG_EXISTS if File.exists?(File.join(Dir.home,'.gistto')) && !overwrite
 				config_file_path = File.join(Dir.home, '.gistto')
 				puts "configuration file \t[%s]" % "#{config_file_path}".cyan
+
+        # creating gisto configuration folder
+        gistto_folder = File.join(Dir.home, '/.gistto_home')
+				FileUtils.mkdir gistto_folder  unless File.exists? gistto_folder
+
 				#
 				# validates cert and copy to temp
 				#
-				path_cert = File.join('/tmp','gistto.crt')
+        path_cert = File.join("#{Dir.home}/.gistto_home",'gistto.crt')
+
 				unless File.exists? path_cert
-					FileUtils.cp File.join(File.expand_path('../../../extras', __FILE__),'gistto.crt'), '/tmp'
+          FileUtils.cp File.join(File.expand_path('../../../extras', __FILE__),'gistto.crt'), "#{Dir.home}/.gistto_home"
 					abort "Cert File can't be copied to temp dir" unless File.exists? path_cert
 				end
 				puts "Security Cert \t\t[%s] [%s]" % ["Configured".green, "#{path_cert}".cyan]
+				
 				#
 				# creating home file 
 				#
 				home_path = File.join(Dir.home, 'gistto')
 				FileUtils.mkdir home_path unless File.exists? home_path
 				puts "Gistto directory \t[%s] [%s]" % ["Configured".green, "#{home_path}".cyan]
+				
 				#
 				# getting github user and ask for password if github --global user.name is not configured
 				# the password will be asked for typing otherwise aborted
@@ -51,6 +60,7 @@ module Gistto
 	    		# user still empty?
 	    		abort "Please configure GitHub Account before continue, remember add git config --global user.name" if str_user.empty?
 	    	end 
+	    	
 	    	#
 	    	# ask for password
 	    	# 
@@ -64,10 +74,6 @@ module Gistto
 	    	# generate token
 	    	# 
 	    	github_response = get_token_for str_user, str_pass
-	    	#abort "\nAn error ocurred getting authorization token with GitHub API [status = %s]" % "#{github_response.status}".red unless github_response.status == 201
-	    	#
-	    	# if message is present and error ocurred
-	    	# 
 	    	github_data = JSON.load github_response.body
 	  		abort "\nAn error ocurred generating GitHub Token, please try again!\nGitHub Error = %s" % "#{github_data['message']}".red if github_data.has_key? 'message'
 	  		puts "Token \t\t\t[%s]" % "Configured".green

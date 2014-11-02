@@ -8,8 +8,10 @@ Gistto is already configured on your MAC :) !!
 
 but
 
-if you want to overwrite the configuration run:
-gistto config -n 
+if you want to overwrite the configuration please follow the next steps:
+
+1.- Delete the personal token access from your profile in Github associated to Gistto
+2.- Run the next command : gistto config -n 
 
 enjoy Gistto!! <3
 EOS
