@@ -3,6 +3,12 @@
 Gistto is a gist client for command interface in mac, it's born under the need to have quick access to gist
 allowing to handle the basic operations and save thats pieces of code that it will be used later
 
+## Prerequisites
+
+Install faraday:
+
+    $ gem install faraday
+
 ## Installation
 
 Install it yourself as:
